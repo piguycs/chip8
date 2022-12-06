@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    ".env.local": "env",
+    "*.css": "css",
+    "iostream": "cpp"
+  }
+}

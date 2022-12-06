@@ -18,6 +18,10 @@ public:
     ir = 0;
     opcode = 0;
 
+    // clocks
+    delay_timer = 60;
+    sound_timer = 60;
+
     sp = 0; // resets the stack pointer
 
     // fontset needs to be loaded at 0x50 / 80
@@ -26,7 +30,25 @@ public:
     }
   }
 
-  void cycle() {}
+  // clock cycle
+  void cycle() {
+    opcode = memory[pc] << 8 | memory[pc + 1];
+
+    switch (opcode & 0xF000) {
+    case 0xA000:
+      ir = opcode & 0xF000;
+      pc += 2;
+      break;
+    default:
+      printf("No opcodes matched");
+    }
+
+    sound_timer--;
+    if (sound_timer == 0) {
+      printf("beep");
+      sound_timer = 60;
+    }
+  }
 
 private:
   unsigned short opcode; // 65k possible opcodes

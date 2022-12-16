@@ -1,9 +1,6 @@
 #include <stdio.h>
 
-int main() {
-
-  return 0;
-}
+int main() { return 0; }
 
 class chip8 {
 
@@ -41,39 +38,90 @@ public:
     // ---------- DECODE ----------
 
     // 0x_NNN where _000 is what I get out
-    unsigned short masked_opcode = opcode & 0xF000;
-    switch (masked_opcode) {
+    switch (opcode & 0xF000) {
+      // OPCODES
 
-    case 0x1000:
-      // goto NNN;
-      break;
-
-    case 0x2000:
-      // *(0xNNN)() // Calls subroutine at NNN
-      stack[sp] = pc;
-      sp++;
-      pc = opcode & 0x0FFF;
-      break;
-
-    case 0xA000:
-      // IR = NNN
-      ir = opcode & 0x0FFF;
-      break;
-
-    // starts with 0
+    // Calls machine code routine (RCA 1802 for COSMAC VIP) at address NNN. Not
+    // necessary for most ROMs
     case 0x0000:
-      switch (opcode & 0x000F) {
-      case 0x0004: // 0x8XY4
-        // Vx += Vy / Adds VY to VX. VF is set to 1 when there's a carry, and
-        // to 0 when there is not
-        unsigned char x = opcode & 0x0F00;
-        unsigned char y = opcode & 0x00F0;
+      // 0x00E0 and 0x00EE
+      switch (opcode & 0x00FF) {
+      case 0x00E0:
+        // TODO clears the screen
         break;
+
+      case 0x00EE: // usually ran after 0x2NNN
+        sp--;
+        pc = stack[sp];
+        break;
+      }
+
+      break;
+
+    // 0x1NNN - GOTO NNN
+    case 0x1000:
+      unsigned short nnn = opcode & 0x0FFF;
+      pc = nnn;
+      break;
+
+    // 0x2NNN - Execute instruction at NNN
+    case 0x2000:
+      unsigned short nnn = opcode & 0x0FFF;
+      stack[sp] = pc; // push current address to the stack
+      sp++;
+      pc = nnn;
+      break;
+
+    // 0x3XNN - Skips the next instruction if VX equals NN (usually the next
+    // instruction is a jump to skip a code block)
+    case 0x3000:
+      unsigned short x = opcode & 0x0F00;
+      unsigned short nn = opcode & 0x00FF;
+      if (V[x << 8] == nn) {
+        pc += 4;
+      } else {
+        pc += 2;
       }
       break;
 
-    default:
-      printf("Opcode 0x%X does not match or is not implimented\n", opcode);
+    // 4XNN - opposite if 0x3XNN
+    case 0x4000:
+      unsigned short x = opcode & 0x0F00;
+      unsigned short nn = opcode & 0x00FF;
+      if (V[x << 8] != nn) {
+        pc += 4;
+      } else {
+        pc += 2;
+      }
+      break;
+
+    // 5XY0 - Skips the next instruction if VX equals VY (usually the next
+    // instruction is a jump to skip a code block)
+    case 0x5000:
+      unsigned int x = (opcode & 0x0F00) << 8;
+      unsigned int y = (opcode & 0x00F0) << 8;
+      if (V[x] == V[y]) {
+        pc += 4;
+      } else {
+        pc += 2;
+      }
+      break;
+
+    // TODO - FINISH THIS
+    
+
+    // 0xANNN - Set ir to NNN
+    case 0xA000:
+      unsigned short nnn = opcode & 0x0FFF;
+      ir = nnn;
+      pc += 2;
+      break;
+
+    // 0xBNNN - Jumps to the address NNN plus V0.
+    case 0xB000:
+      unsigned short nnn = opcode & 0x0FFF;
+      pc = V[0] + nnn;
+      break;
     }
 
     // timers
